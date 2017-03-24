@@ -6,6 +6,10 @@ import hmac
 from base64 import b32decode
 
 def counter_to_bytes(counter_int):
+    """ Takes an integer, representing a counter for HOTP, and returns a bytearray.
+    
+    
+    """
     return bytearray([ int(counter_int) >> max(0,64 - ((x+1) * 8)) & 0xff for x in range(64/8) ])
 
 
@@ -63,9 +67,8 @@ def get_otp_code(seed,digits=6):
     See https://tools.ietf.org/html/rfc4226.
 
     It expects a seed, a string of at least 20 raw bytes.
-    For this to actually be (H|T)OTP, those bytes should be from HMAC.
+    For this to actually be (H|T)OTP, those bytes should be HMAC.
     It can also take a digits argument, an integer representing the number of digits the token should have (default is 6).
-
     """
     if len(seed) < 20:
         raise AttributeError("seed must be at least 20 bytes")
@@ -84,14 +87,17 @@ def get_otp_code(seed,digits=6):
                 (seed_bytes[offset + 1 % len(seed)] & 0xff) << 16 | \
                 (seed_bytes[offset + 2 % len(seed)] & 0xff) << 8 | \
                 seed_bytes[offset + 3 % len(seed)] & 0xff
+    
     # Clear out some cruft
     del seed_bytes
     del last_byte
     del offset
 
-    # our OTP token is bin_code % 10**digits
+    # Get our actual OTP token
     code = str(bin_code % 10**(digits))
-
+    
+    del bin_code
+    
     # the token may not be of the desired length, in which case, prepend zeros
-    return "{}{}".format("0"*max(0,digits-len(code)),code)
+    return "{}{}".format("0"*max(0,digits - len(code)),code)
 
