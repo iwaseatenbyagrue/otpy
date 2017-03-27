@@ -66,3 +66,14 @@ def test_get_otp_code_seed_error():
             otp.get_otp_code("a"*x)
     
     assert len(otp.get_otp_code("a"*20))
+
+
+def test_hotp_from_b32_secret_counter_error():
+    """ Ensure get_hotp_from_b32_secret errors on missing counter
+    """
+
+    with pytest.raises(otp.CounterError):
+        otp.get_hotp_from_b32_secret("a"*16)
+        otp.get_hotp_from_b32_secret("a"*16,code=None)
+    
+    assert otp.get_hotp_from_b32_secret("a"*16,count=1)
