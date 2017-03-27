@@ -35,28 +35,28 @@ def test_get_hotp_from_b32_secret():
     for x in range(3, 10):
         for c in range(1, 5):
             for algo in ['sha1', 'sha256', 'sha512']:
-        
+
                 current_token = otp.get_totp_from_b32_secret(
                                     'testinginginging',
                                     digits=x,
                                     count=c,
                                     algorithm=algo)
-            
+
                 token = otp.get_hotp_from_b32_secret(
                             'testinginginging',
                             count=c,
                             timestamp=10000*x,
                             digits=x,
                             algorithm=algo)
-                
+
                 assert last != token
                 assert current_token != token
                 last = token
-                
+
                 assert len(token) == x
                 if not token.startswith('0'):
                     assert str(int(token)) == token
-                
+
 
 def test_get_otp_code_seed_error():
     """ Ensure get_otp_code errors on insufficient seed material
@@ -64,7 +64,7 @@ def test_get_otp_code_seed_error():
     for x in range(1, 20):
         with pytest.raises(otp.SeedError):
             otp.get_otp_code("a"*x)
-    
+
     assert len(otp.get_otp_code("a"*20))
 
 
@@ -74,6 +74,6 @@ def test_hotp_from_b32_secret_counter_error():
 
     with pytest.raises(otp.CounterError):
         otp.get_hotp_from_b32_secret("a"*16)
-        otp.get_hotp_from_b32_secret("a"*16,code=None)
-    
-    assert otp.get_hotp_from_b32_secret("a"*16,count=1)
+        otp.get_hotp_from_b32_secret("a"*16, count=None)
+
+    assert otp.get_hotp_from_b32_secret("a"*16, count=1)

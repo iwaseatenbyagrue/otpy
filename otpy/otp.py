@@ -9,6 +9,7 @@ from base64 import b32decode
 class SeedError(Exception):
     pass
 
+
 class CounterError(Exception):
     pass
 
@@ -54,10 +55,10 @@ def get_hotp_code(secret, count=None, algorithm=sha1, digits=6, **kwargs):
     It then uses get_otp_code to do the rest
 
     """
-    
+
     if count is None:
         raise CounterError('no counter provided, or counter is None')
-    
+
     if isinstance(algorithm, (str, bytearray, bytes)):
         algorithm = {
                         "sha1": sha1,
