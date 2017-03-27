@@ -6,7 +6,10 @@ import hmac
 from base64 import b32decode
 
 
-class SeedError(BaseException):
+class SeedError(Exception):
+    pass
+
+class CounterError(Exception):
     pass
 
 
@@ -24,7 +27,10 @@ def get_totp_from_b32_secret(secret, **kwargs):
 
     This is a convenience function to get a token from a 'raw' secret.
     """
-    secret_bytes = b32decode(secret.replace(" ", "").upper())
+    secret_bytes = b32decode(
+                                secret.replace(" ", "").upper(),
+                                casefold=True
+                            )
     return get_totp_code(secret_bytes, **kwargs)
 
 
@@ -34,17 +40,24 @@ def get_hotp_from_b32_secret(secret, **kwargs):
 
     This is a convenience function to get a token from a 'raw' secret.
     """
-    secret_bytes = b32decode(secret.replace(" ", "").upper())
+    secret_bytes = b32decode(
+                                secret.replace(" ", "").upper(),
+                                casefold=True
+                            )
     return get_hotp_code(secret_bytes, **kwargs)
 
 
-def get_hotp_code(secret, count, algorithm=sha1, digits=6, **kwargs):
+def get_hotp_code(secret, count=None, algorithm=sha1, digits=6, **kwargs):
     """ Implements HOTP based on https://tools.ietf.org/html/rfc4226.
 
     All this call actually does is correctly prepare our HMAC.
     It then uses get_otp_code to do the rest
 
     """
+    
+    if count is None:
+        raise CounterError('no counter provided, or counter is None')
+    
     if isinstance(algorithm, (str, bytearray, bytes)):
         algorithm = {
                         "sha1": sha1,
@@ -54,11 +67,12 @@ def get_hotp_code(secret, count, algorithm=sha1, digits=6, **kwargs):
 
     return get_otp_code(
                             hmac.new(
-                                        secret,
-                                        counter_to_bytes(count),
-                                        algorithm
+                                secret,
+                                counter_to_bytes(count),
+                                algorithm
                             ).digest(),
-                            int(digits))
+                            int(digits)
+                        )
 
 
 def get_totp_code(
