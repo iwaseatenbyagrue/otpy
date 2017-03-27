@@ -6,6 +6,7 @@ from click_plugins import with_plugins
 
 from . import otp
 
+
 @with_plugins(iter_entry_points('{}.plugins'.format(__package__)))
 @click.group()
 @click.version_option()
@@ -14,34 +15,46 @@ def base():
     """
     pass
 
-@base.command()
-@click.argument("secret")
-@click.option('--digits','-d',
-    help='token digits',
-    default=6,
-    type=int
-)
-def totp(secret,digits):
-    """ Returns a TOTP token (similar to Google Authenticator for example) given a SECRET
-    """
-    print otp.get_totp_from_b32_secret(secret, digits=digits)
 
 @base.command()
 @click.argument("secret")
-@click.option('--digits','-d',
+@click.option(
+    '--digits',
+    '-d',
     help='token digits',
     default=6,
     type=int
 )
-@click.option('--count','-c',
+def totp(secret, digits):
+    """ Returns a TOTP token given a SECRET
+    """
+
+    print otp.get_totp_from_b32_secret(secret, digits=digits)
+
+
+@base.command()
+@click.argument("secret")
+@click.option(
+    '--digits',
+    '-d',
+    help='token digits',
+    default=6,
+    type=int
+)
+@click.option(
+    '--count',
+    '-c',
     help='token counter value',
     default=None,
     required=True,
     type=int
 )
-def hotp(secret,count,digits):
-    """ Returns a HOTP token (similar to Google Authenticator for example) given a SECRET
-    """    
+def hotp(secret, count, digits):
+    """ Returns a HOTP token given a SECRET and COUNT.
+    """
 
-    print otp.get_hotp_from_b32_secret(secret, count=count, digits=digits)
-    
+    print otp.get_hotp_from_b32_secret(
+                                        secret,
+                                        count=count,
+                                        digits=digits
+                                        )
