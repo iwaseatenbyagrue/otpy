@@ -8,6 +8,10 @@ def test_get_totp_from_b32_secret():
     """
     last = None
 
+    # Check spaces work
+    assert otp.get_totp_from_b32_secret("a"*16, timestamp=0) == \
+        otp.get_totp_from_b32_secret("a "*16, timestamp=0)
+
     for x in range(3, 10):
         for algo in ['sha1', 'sha256', 'sha512']:
             current_token = otp.get_totp_from_b32_secret(
@@ -31,6 +35,9 @@ def test_get_hotp_from_b32_secret():
     """ Test get_hotp_from_b32_secret.
     """
     last = None
+
+    assert otp.get_hotp_from_b32_secret("a"*16, count=0) == \
+        otp.get_hotp_from_b32_secret("a "*16, count=0)
 
     for x in range(3, 10):
         for c in range(1, 5):
