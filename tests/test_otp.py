@@ -1,6 +1,18 @@
 import otpy.otp as otp
 import pytest
 
+from hashlib import sha1, sha256, sha512
+
+
+def test_get_algo():
+
+    for h in [sha1, sha256, sha512]:
+        assert h == otp.get_algo(h)
+
+    assert sha1 == otp.get_algo('not a hash name')
+    assert sha1 == otp.get_algo(1)
+    assert sha1 == otp.get_algo(None)
+
 
 def test_get_totp_from_b32_secret():
     """ Test get_totp_from_b32_secret.
@@ -84,3 +96,26 @@ def test_hotp_from_b32_secret_counter_error():
         otp.get_hotp_from_b32_secret("a"*16, count=None)
 
     assert otp.get_hotp_from_b32_secret("a"*16, count=1)
+
+
+def test_counter_to_bytes_errors():
+    """ Ensure counter_to_bytes errors on bad input
+    """
+
+    with pytest.raises(otp.CounterError):
+        otp.counter_to_bytes(None)
+        otp.counter_to_bytes('a')
+        otp.counter_to_bytes(False)
+
+
+def test_time_to_bytes_errors():
+    """ Ensure counter_to_bytes errors on bad input
+    """
+
+    with pytest.raises(otp.TimeError):
+        otp.time_to_bytes(None)
+        otp.time_to_bytes(0, None)
+        otp.time_to_bytes(0, 0, None)
+        otp.time_to_bytes(0, None, 0)
+        otp.time_to_bytes('a')
+        otp.time_to_bytes(False)

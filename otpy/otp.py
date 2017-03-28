@@ -14,13 +14,78 @@ class CounterError(Exception):
     pass
 
 
+class TimeError(Exception):
+    pass
+
+
 def counter_to_bytes(counter_int):
     """ Takes a HOTP counter as an integer, and returns a bytearray.
+
+    That bytearray is suitable for use as input to hmac, to seed OTP.
     """
+
+    if not isinstance(counter_int, (int, float)):
+        raise CounterError('counter must be an integer or float')
+
     return bytearray([
                     int(counter_int) >> max(0, 64 - ((x+1) * 8)) & 0xff
                     for x in range(64/8)
                     ])
+
+
+def time_to_bytes(timestamp=None, initial_timestamp=0, period=30):
+    """ Take a Unix timestamp, and returns a bytearray.
+
+    That bytearray is suitable for use as input to hmac, to seed OTP.
+
+    Optionally, the initial_timestamp and period can be provided.
+    """
+
+    for arg in [timestamp, initial_timestamp, period]:
+
+        if not isinstance(arg, (int, float)):
+            raise TimeError('timestamp, initial_timestamp,'
+                            'and period are must be integers or floats')
+
+    return counter_to_bytes(int(floor(
+            (int(timestamp) - int(initial_timestamp)) / float(period))))
+
+
+def b32_secret_to_bytes(secret):
+    """ Takes a base32 secret as a string-ish (with or without spaces),
+    and returns the result of applying b32decode to it.
+
+    """
+    return b32decode(
+                        str(secret).lstrip().rstrip().replace(" ", ""),
+                        casefold=True
+                    )
+
+
+def get_algo(algo_name):
+    """ Returns a hashlib algorithm class given an @algo_name.
+
+    Supported algos are hashlib.sha1, hashlib.sha256, hashlib.512.
+    If algo_name is one of these, it is returned untouched.
+
+    If algo_name is a string, a dict of supported algos is checked.
+    If the string is one of sha1, sha256, or sha512 (case-insensitive),
+    the appropriate hashlib algorithm builtin is returned.
+
+    In all other cases, hashlib.sha1 is returned.
+    """
+
+    if algo_name in (sha1, sha256, sha512):
+        return algo_name
+
+    if not isinstance(algo_name, (str, bytearray, bytes)):
+        algo_name = "replaced"
+
+    return {
+                        "sha1": sha1,
+                        "sha256": sha256,
+                        "sha512": sha512
+            }.get(algo_name.lower(), sha1)
 
 
 def get_totp_from_b32_secret(secret, **kwargs):
@@ -28,24 +93,17 @@ def get_totp_from_b32_secret(secret, **kwargs):
 
     This is a convenience function to get a token from a 'raw' secret.
     """
-    secret_bytes = b32decode(
-                                secret.replace(" ", "").upper(),
-                                casefold=True
-                            )
-    return get_totp_code(secret_bytes, **kwargs)
+
+    return get_totp_code(b32_secret_to_bytes(secret), **kwargs)
 
 
 def get_hotp_from_b32_secret(secret, **kwargs):
     """ Get HOTP token from a base32 encoded secret.
 
-
     This is a convenience function to get a token from a 'raw' secret.
     """
-    secret_bytes = b32decode(
-                                secret.replace(" ", "").upper(),
-                                casefold=True
-                            )
-    return get_hotp_code(secret_bytes, **kwargs)
+
+    return get_hotp_code(b32_secret_to_bytes(secret), **kwargs)
 
 
 def get_hotp_code(secret, count=None, algorithm=sha1, digits=6, **kwargs):
@@ -59,52 +117,31 @@ def get_hotp_code(secret, count=None, algorithm=sha1, digits=6, **kwargs):
     if count is None:
         raise CounterError('no counter provided, or counter is None')
 
-    if isinstance(algorithm, (str, bytearray, bytes)):
-        algorithm = {
-                        "sha1": sha1,
-                        "sha256": sha256,
-                        "sha512": sha512
-                    }.get(algorithm, sha1)
-
-    return get_otp_code(
-                            hmac.new(
-                                secret,
-                                counter_to_bytes(count),
-                                algorithm
-                            ).digest(),
-                            int(digits)
-                        )
+    algo = get_algo(algorithm)
+    seed = hmac.new(secret, counter_to_bytes(count), algo).digest()
+    return get_otp_code(seed, int(digits))
 
 
-def get_totp_code(
-                    secret, timestamp=None, initial_timestamp=0,
-                    period=30, algorithm=sha1, digits=6, **kwargs):
+def get_totp_code(secret, timestamp=None, initial_timestamp=0, period=30,
+                  algorithm=sha1, digits=6, **kwargs):
     """ Implements TOTP based on https://tools.ietf.org/html/rfc6238.
 
     All this call actually does is correctly prepare our HMAC.
     It then uses get_otp_code to do the rest
     """
-    if isinstance(algorithm, (str, bytearray, bytes)):
-        algorithm = {
-                        "sha1": sha1,
-                        "sha256": sha256,
-                        "sha512": sha512
-                    }.get(algorithm, sha1)
+
+    algo = get_algo(algorithm)
 
     if timestamp is None:
         timestamp = time()
 
-    time_count = int(floor((
-                                int(timestamp) - int(initial_timestamp)
-                            ) / float(period)))
+    seed = hmac.new(
+                    secret,
+                    time_to_bytes(timestamp, initial_timestamp, period),
+                    algo
+            ).digest()
 
-    return get_otp_code(
-                        hmac.new(
-                                    secret,
-                                    counter_to_bytes(time_count),
-                                    algorithm
-                        ).digest(),
-                        int(digits))
+    return get_otp_code(seed, int(digits))
 
 
 def get_otp_code(seed, digits=6):
