@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pkg_resources import iter_entry_points
 from time import time
+from hashlib import sha1, sha256, sha512
 
 import click
 from click_plugins import with_plugins
@@ -11,10 +12,19 @@ from . import otp
 @with_plugins(iter_entry_points('{}.plugins'.format(__package__)))
 @click.group()
 @click.version_option()
-def base():
+@click.pass_context
+@click.option(
+    "-a", "--algorithm", default="sha1", show_default=True,
+    type=click.Choice(["md5", "sha1", "sha256", "sha512"]),
+    help="Seed derivation algorithm"
+)
+def base(ctx, algorithm):
     """ otpy 0.1 - a simple TOTP and HOTP token generator
     """
-    pass
+    if ctx.obj is None:
+        ctx.obj = {}
+    
+    ctx.obj["algorithm"] = algorithm
 
 
 @base.command()
@@ -33,15 +43,15 @@ def base():
     default=time(),
     type=int
 )
-def totp(secret, digits, timestamp):
+@click.pass_context
+def totp(ctx, secret, digits, timestamp):
     """ Returns a TOTP token given a SECRET
     """
 
     print otp.get_totp_from_b32_secret(
-                                        secret,
-                                        digits=digits,
-                                        timestamp=timestamp
-                                        )
+            secret, digits=digits, timestamp=timestamp,
+            algorithm=ctx.obj["algorithm"]
+          )
 
 
 @base.command()
@@ -61,12 +71,12 @@ def totp(secret, digits, timestamp):
     required=True,
     type=int
 )
-def hotp(secret, count, digits):
+@click.pass_context
+def hotp(ctx, secret, count, digits):
     """ Returns a HOTP token given a SECRET and COUNT.
     """
 
     print otp.get_hotp_from_b32_secret(
-                                        secret,
-                                        count=count,
-                                        digits=digits
-                                        )
+            secret, count=count, digits=digits,
+            algorithm=ctx.obj["algorithm"]
+          )
