@@ -5,13 +5,18 @@ from hashlib import sha1, sha256, sha512
 
 
 def test_get_algo():
+    """ Ensure get_algo returns sha1 for invalid cases.
 
+    Ensure get_algo returns the correct algo for valid input
+    """
     for h in [sha1, sha256, sha512]:
         assert h == otp.get_algo(h)
 
     assert sha1 == otp.get_algo('not a hash name')
     assert sha1 == otp.get_algo(1)
     assert sha1 == otp.get_algo(None)
+    assert sha256 == otp.get_algo("SHA256")
+    assert sha256 == otp.get_algo("sha256")
 
 
 def test_get_totp_from_b32_secret():
